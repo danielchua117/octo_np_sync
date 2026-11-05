@@ -1,1 +1,0 @@
-{"rate_hz": 10000, "channels": ["photodiode", "barcode_loop", "camera_exposure"], "v_per_count": 0.00025}
