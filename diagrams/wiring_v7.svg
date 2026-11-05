@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="940" font-family="Helvetica,Arial,sans-serif" font-size="15">
+<rect width="1360" height="940" fill="#fff"/>
+<text x="680" y="38" text-anchor="middle" font-size="23" font-weight="bold">Sync Rig v7.1 (single PC): PsychoPy stimulus · NI USB-6421 · Neuropixels OneBox · Hikrobot camera</text>
+<defs><g id="res"><rect x="-22" y="-8" width="44" height="16" fill="#f3e2b3" stroke="#000"/><line x1="-10" y1="-8" x2="-10" y2="8" stroke="#a52a2a" stroke-width="3"/><line x1="0" y1="-8" x2="0" y2="8" stroke="#000" stroke-width="3"/><line x1="10" y1="-8" x2="10" y2="8" stroke="#a52a2a" stroke-width="3"/></g></defs>
+
+<!-- PC + monitor -->
+<rect x="40" y="80" width="250" height="90" rx="8" fill="#f2f2f2" stroke="#555" stroke-width="2"/>
+<text x="165" y="110" text-anchor="middle" font-weight="bold">Rig PC (one computer)</text>
+<text x="165" y="130" text-anchor="middle" font-size="13">PsychoPy + NI (run_experiment.py)</text>
+<text x="165" y="150" text-anchor="middle" font-size="13">+ SpikeGLX (OneBox) + MVS (camera)</text>
+<rect x="40" y="240" width="250" height="170" rx="6" fill="#222" stroke="#000" stroke-width="3"/>
+<text x="165" y="320" text-anchor="middle" fill="#fff" font-weight="bold">Stimulus monitor</text>
+<text x="165" y="340" text-anchor="middle" fill="#ccc" font-size="12">(60 Hz)</text>
+<rect x="240" y="360" width="40" height="40" fill="#fff" stroke="#e6b800" stroke-width="2"/>
+<text x="230" y="395" text-anchor="end" fill="#ffd54f" font-size="11">photodiode patch</text>
+<line x1="165" y1="170" x2="165" y2="240" stroke="#555" stroke-width="5"/><text x="175" y="210" font-size="12">HDMI/DP</text>
+<path d="M290 125 H460 V100" stroke="#555" stroke-width="5" fill="none"/><text x="296" y="117" font-size="12">USB-C (USB 3)</text>
+<path d="M120 170 V200 H20 V715 H1170 V700" stroke="#555" stroke-width="5" fill="none"/><text x="30" y="690" font-size="12">USB 3 to camera</text>
+
+<path d="M1175 110 V66 H215 V80" stroke="#555" stroke-width="5" fill="none"/><text x="1165" y="88" text-anchor="end" font-size="12">USB 3 (OneBox data)</text>
+<!-- NI -->
+<rect x="440" y="100" width="300" height="520" rx="10" fill="#e8eef7" stroke="#1f4e8c" stroke-width="3"/>
+<text x="590" y="130" text-anchor="middle" font-size="19" font-weight="bold">NI mioDAQ USB-6421</text>
+<text x="590" y="150" text-anchor="middle" font-size="13">master clock · records everything</text>
+<text x="460" y="180" font-size="13" font-weight="bold" fill="#1f4e8c">AO/DIO connector</text>
+<circle cx="740" cy="205" r="6" fill="#bbb"/><text x="720" y="210" text-anchor="end" fill="#999">P0.0  spare</text>
+<circle cx="740" cy="250" r="6"/><text x="720" y="255" text-anchor="end">P0.1  BARCODE</text>
+<circle cx="740" cy="295" r="6"/><text x="720" y="300" text-anchor="end">P0.2  CAM marker</text>
+<circle cx="740" cy="340" r="6"/><text x="720" y="345" text-anchor="end">D GND</text>
+<circle cx="440" cy="295" r="6"/><text x="460" y="300">+5V (pin 24)</text>
+<text x="460" y="395" font-size="13" font-weight="bold" fill="#1f4e8c">AI connector (RSE)</text>
+<circle cx="440" cy="430" r="6"/><text x="460" y="435">AI0  photodiode</text>
+<circle cx="440" cy="490" r="6"/><text x="460" y="495">AI GND</text>
+<circle cx="740" cy="430" r="6"/><text x="720" y="435" text-anchor="end">AI1  BC loopback</text>
+<circle cx="740" cy="470" r="6" fill="#bbb"/><text x="720" y="475" text-anchor="end" fill="#999">AI2  spare</text>
+<circle cx="740" cy="530" r="6"/><text x="720" y="535" text-anchor="end">AI3  camera exposure</text>
+<circle cx="740" cy="590" r="6"/><text x="720" y="595" text-anchor="end">CHSGND</text>
+
+<!-- OneBox -->
+<rect x="1040" y="110" width="270" height="180" rx="10" fill="#f3e9f5" stroke="#7a39bb" stroke-width="3"/>
+<text x="1175" y="140" text-anchor="middle" font-size="19" font-weight="bold">Neuropixels OneBox</text>
+<text x="1175" y="160" text-anchor="middle" font-size="13">rear panel · recorded by SpikeGLX on rig PC</text>
+<rect x="1028" y="218" width="24" height="34" rx="3" fill="#d4af37" stroke="#000" stroke-width="2"/>
+<text x="1062" y="232" font-weight="bold">SMA1 (sync in)</text>
+<text x="1062" y="250" font-size="12">centre = barcode</text>
+<text x="1062" y="266" font-size="12">shell = ground</text>
+<text x="1175" y="284" text-anchor="middle" font-size="11" fill="#555">12 V adapter (rear) · USB 3 to rig PC</text>
+
+<!-- Camera -->
+<rect x="1010" y="335" width="320" height="365" rx="10" fill="#eef6ea" stroke="#3a7d2c" stroke-width="3"/>
+<text x="1170" y="360" text-anchor="middle" font-size="18" font-weight="bold">Hikrobot MV-CS050-10UM/UC</text>
+<text x="1170" y="378" text-anchor="middle" font-size="12">USB 3.0 powered · 6-pin P7 I/O cable</text>
+<g font-size="13">
+<circle cx="1010" cy="405" r="6"/><rect x="1020" y="398" width="14" height="14" fill="#f2d000" stroke="#000"/><text x="1040" y="410">Pin 2 yellow · OPTO_IN (Line0+)</text>
+<circle cx="1010" cy="440" r="6"/><rect x="1020" y="433" width="14" height="14" fill="#2ca02c" stroke="#000"/><text x="1040" y="445">Pin 5 green · OPTO_GND (Line0−/1−)</text>
+<circle cx="1010" cy="490" r="6"/><rect x="1020" y="483" width="14" height="14" fill="#1f5fd6" stroke="#000"/><text x="1040" y="495">Pin 4 blue · OPTO_OUT (Line1+)</text>
+</g>
+<line x1="1025" y1="520" x2="1315" y2="520" stroke="#9c9" />
+<text x="1025" y="540" font-size="12" font-weight="bold">Not connected (insulate each end):</text>
+<text x="1025" y="557" font-size="12">Pin 1 orange DC_PWR · Pin 3 purple GPIO (Line2)</text>
+<text x="1025" y="573" font-size="12">Pin 6 gray GND (power ground) · drain/shield</text>
+<line x1="1025" y1="588" x2="1315" y2="588" stroke="#9c9" />
+<text x="1025" y="608" font-size="12">Line0: marker in (HIGH 3.3–24 V, LOW 0–1 V)</text>
+<text x="1025" y="625" font-size="12">Line1: Strobe · Exposure Start Active · 1000 µs</text>
+<text x="1025" y="642" font-size="12">5 V + 2 kΩ pull-up: LOW ≈ 0.6–0.7 V, ≈ 2 mA</text>
+<text x="1025" y="659" font-size="12">Fast edge = falling (3–6 µs delay)</text>
+<text x="1025" y="676" font-size="12">60 fps · start after “[NI] AI recording”</text>
+
+<g fill="none" stroke-width="3">
+<!-- TTL -->
+
+<!-- barcode -->
+<path d="M746 250 H880 V235 H1028" stroke="#1f77b4"/>
+<path d="M960 340 V275 H1000 V245 H1028" stroke="#000"/><path d="M746 340 H960" stroke="#000"/>
+<!-- loopbacks -->
+<path d="M790 250 V430 H746" stroke="#1f77b4" stroke-dasharray="7 5"/>
+
+<!-- cam marker -->
+<path d="M746 295 H900 V405 H1004" stroke="#2a9d8f"/>
+<!-- cam exposure out -->
+<path d="M746 530 H870 V490 H1004" stroke="#8c564b"/><path d="M870 482 V490" stroke="#8c564b"/>
+<path d="M960 340 V440 H1004" stroke="#000"/>
+<!-- pullup from +5V -->
+<path d="M434 295 H400 V80 H830 V420 H870 V438" stroke="#ff7f0e"/>
+
+<!-- chassis -->
+<path d="M746 590 H800 V640" stroke="#2ca02c" stroke-width="5" stroke-dasharray="12 6"/>
+</g>
+<circle cx="790" cy="250" r="5" fill="#1f77b4"/>
+<circle cx="870" cy="490" r="5" fill="#8c564b"/><circle cx="960" cy="340" r="5"/>
+<use href="#res" x="940" y="235"/><rect x="985" y="226" width="43" height="28" rx="4" fill="#555" opacity=".35"/><text x="1005" y="200" font-size="11" text-anchor="middle">coax → SMA plug</text>
+<text x="890" y="225" text-anchor="middle" font-size="11">100 Ω (optional)</text>
+<g transform="translate(870,460) rotate(90)"><use href="#res"/></g>
+<text x="884" y="452" font-size="12" font-weight="bold">2 kΩ</text><text x="884" y="466" font-size="11">pull-up</text><text x="884" y="479" font-size="10" fill="#555">(required)</text>
+<g stroke="#2ca02c" stroke-width="3"><line x1="780" y1="640" x2="820" y2="640"/><line x1="787" y1="648" x2="813" y2="648"/><line x1="794" y1="656" x2="806" y2="656"/></g>
+<text x="828" y="650" font-size="12">rig chassis</text>
+
+<!-- photodiode circuit -->
+<g fill="none" stroke-width="3">
+<path d="M434 295 H340 V403" stroke="#ff7f0e"/>
+<path d="M340 458 V470" stroke="#ff7f0e"/><path d="M340 430 H434" stroke="#ff7f0e" opacity="0"/>
+<path d="M340 470 H360 V430 H434" stroke="#ff7f0e"/>
+<path d="M340 470 V500" stroke="#ff7f0e"/>
+<path d="M340 545 V560 H400 V490 H434" stroke="#000"/>
+</g>
+<circle cx="340" cy="430" r="26" fill="#f7f7f7" stroke="#000" stroke-width="2.5"/>
+<line x1="331" y1="416" x2="331" y2="444" stroke="#000" stroke-width="4"/>
+<line x1="331" y1="422" x2="340" y2="405" stroke="#000" stroke-width="2.5"/><line x1="331" y1="438" x2="340" y2="456" stroke="#000" stroke-width="2.5"/>
+<polygon points="340,456 331,451 337,446" fill="#000"/>
+<path d="M285 395 L312 418" stroke="#e6b800" stroke-width="3"/><polygon points="314,420 303,418 308,411" fill="#e6b800"/>
+<circle cx="340" cy="470" r="5" fill="#ff7f0e"/>
+<g transform="translate(340,522) rotate(90)"><use href="#res"/></g>
+<text x="300" y="590" font-size="12">TEPT5600 taped on patch</text><text x="300" y="606" font-size="12">C→+5V · E→AI0 (0 V when covered)</text>
+<text x="352" y="527" font-size="12">10 kΩ</text>
+
+<!-- Key -->
+<rect x="40" y="740" width="1280" height="185" rx="8" fill="#fafafa" stroke="#999"/>
+<text x="60" y="768" font-size="17" font-weight="bold">Key</text>
+<g fill="none" stroke-width="3">
+<rect x="60" y="786" width="55" height="18" rx="3" fill="#555" opacity=".35"/><line x1="60" y1="795" x2="115" y2="795" stroke="#1f77b4"/>
+<line x1="60" y1="822" x2="115" y2="822" stroke="#1f77b4"/>
+<line x1="60" y1="849" x2="115" y2="849" stroke="#000"/>
+<line x1="60" y1="876" x2="115" y2="876" stroke="#2ca02c" stroke-width="5" stroke-dasharray="12 6"/>
+<line x1="60" y1="903" x2="115" y2="903" stroke="#555" stroke-width="5"/>
+<line x1="500" y1="795" x2="555" y2="795" stroke="#2a9d8f"/>
+<line x1="500" y1="822" x2="555" y2="822" stroke="#8c564b"/>
+<line x1="500" y1="849" x2="555" y2="849" stroke="#ff7f0e"/>
+<line x1="500" y1="876" x2="555" y2="876" stroke="#1f77b4" stroke-dasharray="7 5"/>
+</g>
+<text x="125" y="800">Coax (RG-174/316) to OneBox SMA1</text>
+<text x="125" y="827">Barcode (start pulse = onset) → SMA1 centre</text>
+<text x="125" y="854">Ground (D GND → SMA shell, camera OPTO_GND)</text>
+<text x="125" y="881">Chassis ground (18 AWG)</text>
+<text x="125" y="908">USB / video cables</text>
+<text x="565" y="800">Camera marker (100 ms per barcode) → Line0, no resistor</text>
+<text x="565" y="827">Camera exposure strobe per frame (Line1+) → AI3</text>
+<text x="565" y="854">+5V supply (photodiode, 2 kΩ camera pull-up)</text>
+<text x="565" y="881">Loopback jumper (P0.1 → AI1)</text>
+<use href="#res" x="1010" y="795"/><text x="1040" y="800">Resistor</text>
+<circle cx="1010" cy="822" r="6"/><text x="1040" y="827">Terminal / pin</text>
+<circle cx="1010" cy="849" r="5" fill="#1f77b4"/><text x="1040" y="854">Junction</text>
+<text x="980" y="881" font-size="12" fill="#444">Barcode and camera marker</text>
+<text x="980" y="897" font-size="12" fill="#444">all start on the same NI clock tick.</text>
+<text x="980" y="913" font-size="12" fill="#444">NI grounds are tied internally.</text>
+</svg>
