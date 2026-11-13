@@ -1,4 +1,9 @@
-"""Align NI barcodes, photodiode onsets, camera exposure strobes, and OneBox time."""
+"""Align NI barcodes, photodiode onsets, camera exposure strobes, and OneBox time.
+
+The aligned table is written as trials_aligned.bin, a compressed NumPy NPZ
+container with a .bin extension, plus trials_aligned.schema.json. Use
+load_aligned_bin() to read it safely without pickle.
+"""
 import argparse, json, os, sys
 import numpy as np
 import pandas as pd
@@ -7,12 +12,69 @@ import config as C
 from barcode_tools import edges_from_analog, decode
 
 
+BINARY_FORMAT = "octo_np_sync_table_npz_v1"
+
+
+def save_aligned_bin(df, path):
+    """Save a DataFrame as a compressed binary table and JSON schema sidecar.
+
+    This is an NPZ container (ZIP + NumPy arrays), not a headerless raw binary
+    array. Numeric columns retain their NumPy types. Text columns are Unicode;
+    their missing values are represented by per-column boolean null masks.
+    """
+    arrays = {}
+    fields = []
+    for i, name in enumerate(df.columns):
+        key = f"col_{i}"
+        series = df[name]
+        if pd.api.types.is_numeric_dtype(series.dtype) or pd.api.types.is_bool_dtype(series.dtype):
+            arrays[key] = series.to_numpy()
+            fields.append({"name": str(name), "key": key, "kind": "numeric", "dtype": str(series.dtype)})
+        else:
+            text = series.astype("string")
+            null_key = f"null_{i}"
+            arrays[key] = text.fillna("").to_numpy(dtype=str)
+            arrays[null_key] = text.isna().to_numpy(dtype=np.bool_)
+            fields.append({"name": str(name), "key": key, "kind": "text", "null_key": null_key})
+
+    with open(path, "wb") as fh:
+        np.savez_compressed(fh, **arrays)
+
+    schema_path = os.path.splitext(path)[0] + ".schema.json"
+    schema = {"format": BINARY_FORMAT, "rows": len(df), "fields": fields}
+    with open(schema_path, "w", encoding="utf-8") as fh:
+        json.dump(schema, fh, indent=2)
+    return schema_path
+
+
+def load_aligned_bin(path):
+    """Load a table written by save_aligned_bin(), without enabling pickle."""
+    schema_path = os.path.splitext(path)[0] + ".schema.json"
+    with open(schema_path, encoding="utf-8") as fh:
+        schema = json.load(fh)
+    if schema.get("format") != BINARY_FORMAT:
+        raise ValueError(f"Unsupported aligned binary format in {schema_path}")
+
+    columns = {}
+    with np.load(path, allow_pickle=False) as archive:
+        for field in schema["fields"]:
+            values = archive[field["key"]]
+            if field["kind"] == "text":
+                values = pd.array(values, dtype="string")
+                mask = archive[field["null_key"]]
+                values[mask] = pd.NA
+            columns[field["name"]] = values
+    return pd.DataFrame(columns)
+
+
 def load_ai(sdir):
     with open(os.path.join(sdir, "ni_ai.json")) as f:
         meta = json.load(f)
     raw = np.fromfile(os.path.join(sdir, "ni_ai.bin"), dtype="<i2")
     nch = len(meta["channels"])
-    x = raw[:len(raw) // nch * nch].reshape(-1, nch).T * meta.get("v_per_count", 0.001)
+    if nch <= 0 or raw.size % nch:
+        raise ValueError("NI binary data size does not match the channel metadata")
+    x = raw.reshape(-1, nch).T * meta.get("v_per_count", 0.001)
     return {name: x[i] for i, name in enumerate(meta["channels"])}, meta["rate_hz"]
 
 
@@ -53,7 +115,6 @@ def main():
         print(f"camera: {len(strobes)} exposure strobes; mean {(len(strobes)-1)/(strobes[-1]-strobes[0]):.2f} Hz; {len(gaps)} long gaps")
     rows = []
     for t0, code, pdt in zip(ni_t, ni_c, pd_on, strict=True):
-        # The frame at visible onset is based on the photodiode, not the earlier NI TTL.
         reference = pdt if np.isfinite(pdt) else t0
         f = np.searchsorted(strobes, reference) if len(strobes) else -1
         rows.append(dict(barcode=code, ni_barcode_s=t0, photodiode_onset_s=pdt,
@@ -84,11 +145,13 @@ def main():
     if os.path.exists(plog):
         df = pd.read_csv(plog).merge(df, on="barcode", how="outer")
         missing = df.ni_barcode_s.isna().sum()
-        if missing: print(f"WARNING: {missing} PsychoPy trials have no NI barcode")
-    out = os.path.join(a.session, "trials_aligned.csv")
-    df.to_csv(out, index=False)
+        if missing:
+            print(f"WARNING: {missing} PsychoPy trials have no NI barcode")
+    out = os.path.join(a.session, "trials_aligned.bin")
+    schema_path = save_aligned_bin(df, out)
     lat = df.display_latency_ms.to_numpy(dtype=float) if "display_latency_ms" in df else np.array([])
     print(f"{len(ni_c)} barcodes | median display latency {np.nanmedian(lat) if np.isfinite(lat).any() else float('nan'):.2f} ms | wrote {out}")
+    print(f"Binary schema: {schema_path}")
     return df
 
 
