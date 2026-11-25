@@ -92,6 +92,114 @@ def photodiode_onsets(pd_v, fs, after, window_s=0.2):
     return np.asarray(out)
 
 
+def load_onebox_edges(path):
+    ob = pd.read_csv(path)
+    if not {"time_s", "value"}.issubset(ob.columns):
+        raise ValueError("OneBox CSV must contain time_s,value columns")
+    return ob.time_s.to_numpy(float), ob.value.to_numpy(int)
+
+
+def fit_clock(source_times, target_times):
+    if len(source_times) < 2:
+        raise ValueError("At least two matching barcodes are required for clock fitting")
+    slope, intercept = np.polyfit(source_times, target_times, 1)
+    residuals = target_times - (slope * source_times + intercept)
+    return slope, intercept, residuals
+
+
+def match_barcode_streams(ni_t, ni_c, ob_t, ob_c):
+    ni = pd.DataFrame({"barcode": ni_c, "ni_time_s": ni_t}).drop_duplicates("barcode")
+    ob = pd.DataFrame({"barcode": ob_c, "onebox_time_s": ob_t}).drop_duplicates("barcode")
+    return ni.merge(ob, on="barcode", how="inner")
+
+
+def report_schedule(schedule, ni_t, ni_c):
+    """Compare the intended periodic schedule with decoded NI barcodes."""
+    fired = schedule[schedule.status == "fired"].copy()
+    fired["barcode"] = fired["barcode"].astype("int64")
+    decoded = pd.DataFrame({"barcode": ni_c.astype("int64"), "ni_time_s": ni_t})
+    expected = set(fired.barcode)
+    received = set(decoded.barcode)
+    missing = sorted(expected - received)
+    unexpected = sorted(received - expected)
+    print(
+        f"schedule: {len(fired)} fired; NI decoded {len(decoded)} complete "
+        f"barcodes; missing {len(missing)}; unexpected {len(unexpected)}"
+    )
+    if missing:
+        print("WARNING: NI-missing scheduled barcodes:", missing)
+    if unexpected:
+        print("WARNING: NI decoded unscheduled barcodes:", unexpected)
+    if len(fired) > 1:
+        intervals = np.diff(fired.actual_elapsed_s.to_numpy(float))
+        print(
+            f"schedule intervals: mean {np.mean(intervals):.6f} s; "
+            f"range {np.min(intervals):.6f}-{np.max(intervals):.6f} s"
+        )
+    return fired, decoded
+
+
+def align_periodic_trials(session, plog, ni_t, ni_c, onebox_match=None):
+    """Align trial timestamps to NI using the periodic barcode event log."""
+    schedule_path = os.path.join(session, "barcode_events.csv")
+    if not os.path.exists(schedule_path):
+        raise ValueError(
+            "Periodic trial log has no barcode column and barcode_events.csv is missing"
+        )
+    schedule = pd.read_csv(schedule_path)
+    required = {"barcode", "actual_elapsed_s", "status"}
+    if not required.issubset(schedule.columns):
+        raise ValueError(f"{schedule_path} must contain {sorted(required)}")
+    schedule = schedule.dropna(subset=["barcode"]).copy()
+    fired, decoded = report_schedule(schedule, ni_t, ni_c)
+    matched = fired.merge(decoded, on="barcode", how="inner")
+    if len(matched) < 2:
+        raise ValueError("Need at least two fired barcodes decoded by NI for periodic alignment")
+
+    slope, intercept, residuals = fit_clock(
+        matched.actual_elapsed_s.to_numpy(float),
+        matched.ni_time_s.to_numpy(float),
+    )
+    print(
+        f"periodic clock: NI = {intercept:.6f} + {slope:.9f} * schedule_elapsed "
+        f"(drift {(slope - 1) * 1e6:+.1f} ppm, "
+        f"max residual {np.abs(residuals).max() * 1e3:.3f} ms)"
+    )
+
+    trials = plog.copy()
+    if "flip_time_s" not in trials.columns:
+        raise ValueError("psychopy_trials.csv must contain flip_time_s")
+    has_perf_anchor = (
+        "flip_perf_s" in trials.columns
+        and "schedule_epoch_perf_s" in schedule.columns
+        and schedule["schedule_epoch_perf_s"].notna().any()
+    )
+    if has_perf_anchor:
+        epoch_values = schedule["schedule_epoch_perf_s"].dropna().to_numpy(float)
+        if not np.allclose(epoch_values, epoch_values[0], rtol=0, atol=1e-6):
+            raise ValueError("barcode_events.csv contains inconsistent schedule epochs")
+        schedule_elapsed = trials.flip_perf_s.to_numpy(float) - epoch_values[0]
+    else:
+        first_flip = float(trials.flip_time_s.iloc[0])
+        schedule_elapsed = trials.flip_time_s.to_numpy(float) - first_flip
+    ni_trial = intercept + slope * schedule_elapsed
+    out = trials.copy()
+    out["schedule_elapsed_s"] = schedule_elapsed
+    out["ni_trial_time_s"] = ni_trial
+    fired_times = fired.actual_elapsed_s.to_numpy(float)
+    fired_codes = fired.barcode.to_numpy("int64")
+    out["barcode_before"] = pd.Series(
+        [fired_codes[np.searchsorted(fired_times, t, side="right") - 1]
+         if len(fired) and np.searchsorted(fired_times, t, side="right") else pd.NA
+         for t in schedule_elapsed],
+        dtype="Int64",
+    )
+    if onebox_match is not None:
+        ob_slope, ob_intercept, _ = onebox_match
+        out["onebox_trial_time_s"] = ob_intercept + ob_slope * ni_trial
+    return out, (slope, intercept), matched
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("session")
@@ -124,29 +232,52 @@ def main():
                          camera_frame_time_s=strobes[f] if 0 <= f < len(strobes) else np.nan,
                          camera_frame_reference="photodiode" if np.isfinite(pdt) else "NI barcode"))
     df = pd.DataFrame(rows)
+    onebox_fit = None
     if a.onebox:
-        ob = pd.read_csv(a.onebox)
-        if not {"time_s", "value"}.issubset(ob.columns):
-            raise ValueError("OneBox CSV must contain time_s,value columns")
-        ob_t, ob_c = decode(ob.time_s.values, ob.value.values.astype(int), t_end=a.onebox_end_s)
+        ob_t, ob_c = load_onebox_edges(a.onebox)
+        ob_t, ob_c = decode(ob_t, ob_c, t_end=a.onebox_end_s)
         if a.onebox_end_s is None:
             print("WARNING: --onebox-end-s omitted; cannot verify that a final OneBox barcode is complete")
-        ni_unique = pd.DataFrame({"code": ni_c, "time": ni_t}).drop_duplicates("code")
-        ob_unique = pd.DataFrame({"code": ob_c, "time": ob_t}).drop_duplicates("code")
-        matched = ni_unique.merge(ob_unique, on="code", suffixes=("_ni", "_ob"))
+        matched = match_barcode_streams(ni_t, ni_c, ob_t, ob_c)
         if len(matched) < 2:
             raise ValueError(f"Need at least two unique matching barcodes for OneBox fit; got {len(matched)}")
-        slope, intercept = np.polyfit(matched.time_ni, matched.time_ob, 1)
-        residuals = matched.time_ob - (slope * matched.time_ni + intercept)
+        slope, intercept, residuals = fit_clock(
+            matched.ni_time_s.to_numpy(), matched.onebox_time_s.to_numpy()
+        )
         print(f"OneBox: matched {len(matched)} unique barcodes, drift {(slope-1)*1e6:+.1f} ppm, max residual {np.abs(residuals).max()*1e3:.3f} ms")
+        onebox_fit = (slope, intercept, residuals)
         df["onebox_barcode_s"] = slope * df.ni_barcode_s + intercept
         df["onebox_photodiode_s"] = slope * df.photodiode_onset_s + intercept
     plog = os.path.join(a.session, "psychopy_trials.csv")
     if os.path.exists(plog):
-        df = pd.read_csv(plog).merge(df, on="barcode", how="outer")
-        missing = df.ni_barcode_s.isna().sum()
-        if missing:
-            print(f"WARNING: {missing} PsychoPy trials have no NI barcode")
+        trials = pd.read_csv(plog)
+        if "barcode" in trials.columns:
+            df = trials.merge(df, on="barcode", how="outer")
+            missing = df.ni_barcode_s.isna().sum()
+            if missing:
+                print(f"WARNING: {missing} PsychoPy trials have no NI barcode")
+        else:
+            df, clock_fit, _ = align_periodic_trials(
+                a.session, trials, ni_t, ni_c, onebox_fit[:2] if onebox_fit else None
+            )
+            trial_ni = df.ni_trial_time_s.to_numpy(float)
+            df["photodiode_onset_s"] = photodiode_onsets(
+                ai["photodiode"], fs, trial_ni
+            )
+            df["display_latency_ms"] = (
+                df.photodiode_onset_s - df.ni_trial_time_s
+            ) * 1000
+            df["camera_strobe_index"] = [
+                (np.searchsorted(strobes, t) if len(strobes) else -1)
+                for t in df.photodiode_onset_s.fillna(df.ni_trial_time_s)
+            ]
+            df["camera_strobe_index"] = df.camera_strobe_index.where(
+                df.camera_strobe_index < len(strobes), -1
+            )
+            if onebox_fit:
+                df["onebox_photodiode_s"] = (
+                    onebox_fit[0] * df.photodiode_onset_s + onebox_fit[1]
+                )
     out = os.path.join(a.session, "trials_aligned.bin")
     schema_path = save_aligned_bin(df, out)
     lat = df.display_latency_ms.to_numpy(dtype=float) if "display_latency_ms" in df else np.array([])
