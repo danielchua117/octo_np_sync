@@ -1,5 +1,8 @@
 # Octopus Neuropixels synchronization rig
 
+For installing this branch on a new Windows laptop, follow
+[SETUP_NEW_LAPTOP.txt](SETUP_NEW_LAPTOP.txt).
+
 ## Startup and periodic barcode schedule
 
 Run `python run_experiment.py --subject test --trials 3` for a short hardware bench test. The script starts NI AI first so it can timestamp camera exposures from the beginning. It then prompts the operator to start MVS camera acquisition and press **C**; after the configured 0.2 s lead, it prompts for SpikeGLX recording and **S** confirmation. SpikeGLX has a configurable initialization wait (default 3 s). After this the first stimulus flip starts the periodic barcode schedule, and barcodes are emitted every 5 s independently of stimulus onsets. This is a manual coordination workflow: the Python code does not start MVS or SpikeGLX itself.
