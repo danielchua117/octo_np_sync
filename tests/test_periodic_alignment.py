@@ -118,6 +118,9 @@ with tempfile.TemporaryDirectory(prefix="octo_periodic_") as sd:
         text=True,
     )
     assert "PASS: scheduled, NI, and OneBox barcodes match" in validation.stdout
+    assert "schedule/NI clock: drift" in validation.stdout
+    assert "NI/OneBox clock: drift" in validation.stdout
+    assert "OneBox intervals: mean" in validation.stdout
     assert "photodiode detected 4/4 trial onsets" in validation.stdout
 
 print("PASS [periodic alignment]: timestamped trials aligned without trial barcodes")

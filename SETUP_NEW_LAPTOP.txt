@@ -1,0 +1,166 @@
+OCTOPUS LOOMING-SYNC PILOT: NEW WINDOWS LAPTOP SETUP
+====================================================
+
+This guide is for the copilot/looming-sync-pilot branch. It sets up the
+looming-stimulus runner and the software used to record and validate NI,
+periodic-barcode, and photodiode data. The older image-stimulus workflow remains
+available on the copilot/monitor-refresh-319-98hz branch.
+
+IMPORTANT HARDWARE NOTE
+-----------------------
+Python packages do not install the National Instruments device driver. Install
+NI-DAQmx separately from National Instruments, then use NI MAX to confirm that
+the USB-6421 is detected. Do not start a hardware session until the device,
+wiring, MVS acquisition, and SpikeGLX setup have been checked. Software
+simulation does not validate physical hardware.
+
+1. INSTALL PREREQUISITES
+------------------------
+
+Install:
+
+  - 64-bit Miniforge (includes Conda and Miniforge Prompt)
+  - Git for Windows
+  - NI-DAQmx for the USB-6421, from National Instruments
+  - SpikeGLX and MVS separately, if required for the experiment
+
+Use Miniforge Prompt for the commands below. If you have not installed Git,
+download and install Git for Windows first.
+
+2. DOWNLOAD THE RIGHT BRANCH
+----------------------------
+
+In Miniforge Prompt, choose a location for the project and run:
+
+  cd /d C:\Users\YOUR_NAME\Documents
+  git clone --branch copilot/looming-sync-pilot --single-branch https://github.com/danielchua117/octo_np_sync.git
+  cd octo_np_sync
+
+Replace YOUR_NAME with your Windows account folder. The branch name selects the
+looming pilot while keeping the previous image-stimulus branch intact.
+
+3. CREATE THE PYTHON ENVIRONMENT
+--------------------------------
+
+From the repository folder, run:
+
+  conda create -n octo-loom python=3.11 pip
+  conda activate octo-loom
+  python -m pip install --upgrade pip
+  python -m pip install -r requirements.txt
+
+The requirements file installs nidaqmx, NumPy, pandas, and PsychoPy. The
+nidaqmx Python package requires the separate NI-DAQmx device driver installed
+above.
+
+If installation reports an error, keep the full error text. Do not install
+packages into Miniforge's base environment; run these commands after
+"conda activate octo-loom".
+
+4. VERIFY THE SOFTWARE INSTALLATION
+-----------------------------------
+
+From the repository root, with octo-loom activated:
+
+  python --version
+  python -c "import numpy, pandas, psychopy, nidaqmx; print('Python dependencies import successfully')"
+  python tests/test_all.py
+
+The tests are hardware-free. A pass confirms software behavior against
+synthetic data and a mocked NI driver; it does not confirm that the laptop can
+communicate with the physical DAQ, camera, or OneBox.
+
+If the test runner is not available on an older checkout, run:
+
+  python tests/test_decoder.py
+  python tests/test_offline.py
+  python tests/test_periodic_alignment.py
+  python tests/test_ni_rig_mock.py
+
+5. CHECK THE PHYSICAL NI DEVICE
+-------------------------------
+
+After installing NI-DAQmx:
+
+  - Open NI MAX and confirm the USB-6421 appears under Devices and Interfaces.
+  - Check that config.py's DEVICE value matches the device name shown by NI MAX.
+  - Ensure SpikeGLX is not also trying to use this USB-6421 as an NI-DAQ stream.
+  - Confirm the wiring against the current rig diagram and have the lab's
+    responsible person verify electrical connections.
+
+Do not use the NI mock test as a physical device test. The mock intentionally
+replaces the nidaqmx API with a fake driver.
+
+6. DISPLAY-ONLY SMOKE TEST
+--------------------------
+
+With the correct display connected and Windows set to Extend these displays,
+run:
+
+  python run_loom_experiment.py --subject laptop_smoke --simulate
+
+Simulation is for checking that the Python environment and PsychoPy window can
+launch. It does not record real NI data or produce hardware barcodes. Verify
+the selected screen, displayed disk, photodiode patch position, and monitor
+geometry before a hardware session.
+
+7. SHORT HARDWARE BENCH TEST
+----------------------------
+
+Only after the above checks, run an animal-free pilot:
+
+  python run_loom_experiment.py --subject bench
+
+Choose a small trial count (one to three for an initial run). Follow the
+prompts: start camera acquisition and press C, start SpikeGLX and confirm it
+is recording before pressing S, then press SPACE to start the visual trials.
+Watch the Miniforge Prompt for NI messages. A healthy stop reports a positive
+"AI samples per channel" count and no AI recording FAILED or stopped-early
+warning. A fired entry in barcode_events.csv means output was attempted; verify
+the decoded samples too.
+
+8. ANALYZE A COMPLETED SESSION
+------------------------------
+
+The script prints the session directory, for example:
+
+  data\bench_pilot_YYYYMMDD_HHMMSS
+
+After MVS and SpikeGLX have saved their recordings, align the NI session:
+
+  python analysis\align_session.py "data\YOUR_SESSION"
+
+Then validate NI/OneBox barcodes and stimulus photodiode onsets:
+
+  python tools\validate_sync_session.py "data\YOUR_SESSION" "D:\PATH\recording.imec0.ap.bin" "D:\PATH\recording.imec0.ap.meta"
+
+Replace all example paths with the actual session and matching OneBox files.
+The validator writes sync_barcode_validation.csv and
+sync_stimulus_validation.csv into the NI session folder. Keep the OneBox .bin
+and matching .meta together. Its current decoder expects the SY0 saved-channel
+layout documented by the script; it will stop if the metadata layout differs.
+
+9. KEEP THE OLD WORKFLOW
+------------------------
+
+The looming pilot is run by run_loom_experiment.py on branch
+copilot/looming-sync-pilot. The previous image-stimulus task remains
+run_experiment.py on branch copilot/monitor-refresh-319-98hz.
+
+To switch an existing clone between the two branches, first preserve any local
+changes, then run:
+
+  git switch copilot/looming-sync-pilot
+
+or:
+
+  git switch copilot/monitor-refresh-319-98hz
+
+Never overwrite the original script to switch stimulus workflows. Keep separate
+session folders and verify the active branch with:
+
+  git branch --show-current
+
+For assistance, provide the full command, complete error message, active
+branch, Python version, and whether the command was run in the activated
+octo-loom environment. Do not share credentials or NI serial numbers.
