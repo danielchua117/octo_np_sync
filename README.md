@@ -73,7 +73,10 @@ python tools/validate_sync_session.py "data\bench_YYYYMMDD_HHMMSS" ^
 
 This writes `sync_barcode_validation.csv` and
 `sync_stimulus_validation.csv` in the session directory. It intentionally
-does not evaluate camera strobes or PsychoPy dropped-frame counts.
+reports code presence plus schedule-to-NI and NI-to-OneBox clock drift,
+residuals, and decoded intervals. It checks photodiode detection against the
+trial log and intentionally does not evaluate camera strobes or PsychoPy
+dropped-frame counts.
 
 ## Caution
 

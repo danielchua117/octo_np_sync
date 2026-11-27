@@ -76,6 +76,19 @@ def fit_clock(source, target):
     return slope, intercept, residuals
 
 
+def report_intervals(label, times):
+    times = np.asarray(times, dtype=float)
+    times = times[np.isfinite(times)]
+    if len(times) < 2:
+        print(f"  {label} intervals: unavailable")
+        return
+    intervals = np.diff(times)
+    print(
+        f"  {label} intervals: mean {np.mean(intervals):.6f} s; "
+        f"range {np.min(intervals):.6f}-{np.max(intervals):.6f} s"
+    )
+
+
 def barcode_report(schedule, ni_t, ni_c, ob_t, ob_c):
     fired = schedule[schedule["status"].eq("fired")].copy()
     fired["barcode"] = fired["barcode"].astype("int64")
@@ -93,31 +106,63 @@ def barcode_report(schedule, ni_t, ni_c, ob_t, ob_c):
     print(f"  unexpected NI: {sorted(ni_codes - expected) or 'none'}")
     print(f"  unexpected OneBox: {sorted(ob_codes - expected) or 'none'}")
 
+    schedule_ni = fired.merge(ni, on="barcode", how="inner", validate="one_to_one")
+    schedule_fit = None
+    if len(schedule_ni) >= 2:
+        schedule_slope, schedule_intercept, schedule_residuals = fit_clock(
+            schedule_ni["actual_elapsed_s"].to_numpy(float),
+            schedule_ni["ni_time_s"].to_numpy(float),
+        )
+        schedule_fit = (schedule_slope, schedule_intercept)
+        schedule_ni["schedule_ni_residual_ms"] = schedule_residuals * 1000
+        print(
+            f"schedule/NI clock: drift {(schedule_slope - 1) * 1e6:+.2f} ppm; "
+            f"max residual {np.abs(schedule_residuals).max() * 1000:.3f} ms"
+        )
+    else:
+        schedule_ni["schedule_ni_residual_ms"] = np.nan
+        print("schedule/NI clock: unavailable; fewer than two matched barcodes")
+
+    report_intervals(
+        "scheduled actual",
+        fired.sort_values("slot")["actual_elapsed_s"].to_numpy(float),
+    )
+    report_intervals(
+        "NI",
+        schedule_ni.sort_values("slot")["ni_time_s"].to_numpy(float),
+    )
+
     merged = (
         fired[["slot", "barcode", "target_elapsed_s", "actual_elapsed_s"]]
-        .merge(ni, on="barcode", how="outer")
-        .merge(ob, on="barcode", how="outer")
+        .merge(
+            schedule_ni[["barcode", "ni_time_s", "schedule_ni_residual_ms"]],
+            on="barcode", how="outer", validate="one_to_one",
+        )
+        .merge(ob, on="barcode", how="outer", validate="one_to_one")
         .sort_values("barcode")
     )
-    for source, target in (
-        ("ni_time_s", "ni_interval_s"),
-        ("onebox_time_s", "onebox_interval_s"),
-    ):
-        if source in merged:
-            merged[target] = merged[source].diff()
     matched = merged.dropna(subset=["ni_time_s", "onebox_time_s"])
+    onebox_fit = None
     if len(matched) >= 2:
         slope, intercept, residuals = fit_clock(
             matched["ni_time_s"], matched["onebox_time_s"]
         )
+        onebox_fit = (slope, intercept)
+        merged["onebox_fit_residual_ms"] = (
+            merged["onebox_time_s"] - (slope * merged["ni_time_s"] + intercept)
+        ) * 1000
         print(
             f"NI/OneBox clock: drift {(slope - 1) * 1e6:+.2f} ppm; "
             f"max residual {np.abs(residuals).max() * 1000:.3f} ms"
         )
+        report_intervals(
+            "OneBox",
+            matched.sort_values("slot")["onebox_time_s"].to_numpy(float),
+        )
     else:
-        slope = intercept = None
+        merged["onebox_fit_residual_ms"] = np.nan
         print("NI/OneBox clock: unavailable; fewer than two matched barcodes")
-    return merged, (slope, intercept)
+    return merged, onebox_fit
 
 
 def stimulus_report(session, ai, fs, schedule, ni_t, ni_c, onebox_fit, window_s):
